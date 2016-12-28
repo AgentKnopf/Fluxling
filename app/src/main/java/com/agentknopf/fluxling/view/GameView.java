@@ -10,6 +10,7 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Rect;
+import android.support.annotation.StringRes;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.SurfaceHolder;
@@ -29,6 +30,7 @@ public class GameView extends SurfaceView implements ViewCallback {
     private SurfaceHolder holder;
     private Canvas canvas;
     private Paint paint;
+    private Paint textPaint;
     private GameLoop loop;
 
     public GameView(Context context) {
@@ -58,11 +60,6 @@ public class GameView extends SurfaceView implements ViewCallback {
     }
 
     @Override
-    protected void onDetachedFromWindow() {
-        super.onDetachedFromWindow();
-    }
-
-    @Override
     public void render(Store store) {
         if (holder == null) {
             Log.i(TAG, "Created holder and paint instance.");
@@ -70,6 +67,10 @@ public class GameView extends SurfaceView implements ViewCallback {
             holder = getHolder();
             paint = new Paint();
             paint.setStyle(Paint.Style.FILL_AND_STROKE);
+            textPaint = new Paint();
+            textPaint.setColor(Color.WHITE);
+            textPaint.setStyle(Paint.Style.STROKE);
+            textPaint.setTextSize(10f);
         }
         if (holder.getSurface().isValid()) {
             canvas = holder.lockCanvas();
@@ -84,12 +85,20 @@ public class GameView extends SurfaceView implements ViewCallback {
                 creature = entry.getKey();
                 info = entry.getValue();
                 paint.setColor(creature.getDimensions().getColor());
-                canvas.drawRect(new Rect(info.getDrawingOrigin().getX(), info.getDrawingOrigin().getY(),
+                final Rect drawingRect = new Rect(info.getDrawingOrigin().getX(), info.getDrawingOrigin().getY(),
                         info.getDrawingOrigin().getX() + creature.getDimensions().getWidth(),
-                        info.getDrawingOrigin().getY() + creature.getDimensions().getHeight()), paint);
+                        info.getDrawingOrigin().getY() + creature.getDimensions().getHeight());
+                canvas.drawRect(drawingRect, paint);
+                //Draw the name as well slightly above the creature
+                canvas.drawText(creature.getName(), drawingRect.left, drawingRect.top, textPaint);
             }
             Log.i(TAG, "Rendering finished...");
             holder.unlockCanvasAndPost(canvas);
         }
+    }
+
+    @Override
+    public String getString(@StringRes int stringRes) {
+        return getContext().getString(stringRes);
     }
 }

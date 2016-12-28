@@ -5,16 +5,14 @@ import com.agentknopf.fluxling.actions.MoveAll;
 import com.agentknopf.fluxling.model.AppState;
 import com.agentknopf.fluxling.model.Creature;
 import com.agentknopf.fluxling.model.CreatureInfo;
-import com.agentknopf.fluxling.model.CreatureKt;
-import com.agentknopf.fluxling.model.Point;
-import com.agentknopf.fluxling.model.Rectangle;
-import com.agentknopf.fluxling.model.UtilsKt;
 
 import org.junit.Test;
 
 import java.util.HashMap;
 import java.util.Map;
 
+import static com.agentknopf.fluxling.TestUtils.randomCreature;
+import static com.agentknopf.fluxling.TestUtils.randomInfo;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
@@ -24,11 +22,6 @@ import static org.junit.Assert.assertTrue;
  */
 public final class StateTest {
 
-    private static final int MAX_HEIGHT = 150;
-    private static final int MAX_WIDTH = 90;
-    private static final int MIN_VALUE = 1;
-    private static final int COLOR = 256;
-
     @Test
     public void emptyStateList() {
         AppState state = new AppState();
@@ -37,6 +30,16 @@ public final class StateTest {
 
     @Test
     public void reduceStateAddToList() {
+        AppState state = new AppState();
+
+        state = state.reduceState(new AddCreature(randomCreature(), randomInfo()));
+        state = state.reduceState(new AddCreature(randomCreature(), randomInfo()));
+        assertEquals(2, state.creatureCount());
+    }
+
+
+    @Test
+    public void reduceStateAddToListWithOneInitial() {
         Map<Creature, CreatureInfo> map = new HashMap<>();
         map.put(randomCreature(), randomInfo());
         AppState state = new AppState(map);
@@ -60,13 +63,5 @@ public final class StateTest {
             assertTrue(originalState.getCreatureList().containsKey(creature));
             assertNotEquals(originalState.getCreatureList().get(creature), modifiedState.getCreatureList().get(creature));
         }
-    }
-
-    private static Creature randomCreature() {
-        return new Creature(CreatureKt.createName(), new Rectangle(UtilsKt.getInt(MIN_VALUE, MAX_WIDTH), UtilsKt.getInt(MIN_VALUE, MAX_HEIGHT), COLOR));
-    }
-
-    private static CreatureInfo randomInfo() {
-        return new CreatureInfo(new Point(UtilsKt.getInt(1, MAX_WIDTH), UtilsKt.getInt(1, MAX_HEIGHT)));
     }
 }

@@ -1,8 +1,16 @@
 package com.agentknopf.fluxling.model;
 
 import com.agentknopf.fluxling.actions.AddCreature;
+import com.agentknopf.fluxling.actions.EventBus;
+import com.agentknopf.fluxling.actions.GameActions;
 import com.agentknopf.fluxling.actions.MoveAll;
+import com.agentknopf.fluxling.actions.UiAction;
+import com.agentknopf.fluxling.actions.UiActions;
 import com.agentknopf.fluxling.view.ViewCallback;
+import com.fluxling.agentknopf.fluxling.R;
+
+import org.greenrobot.eventbus.Subscribe;
+import org.greenrobot.eventbus.ThreadMode;
 
 import android.support.annotation.NonNull;
 import android.util.Log;
@@ -22,18 +30,20 @@ public final class GameLoop {
     }
 
     public void start() {
+        EventBus.INSTANCE.register(this);
         thread.start();
     }
 
-    public void suspend() {
+    public void stop() {
         loop.stop();
+        EventBus.INSTANCE.unRegister(this);
     }
 
     private static class Loop implements Runnable {
 
         private static final String TAG = Loop.class.getCanonicalName();
         private static final int SLEEP_DURATION = 1000;
-        private static final int MAX_CREATURES = 20;
+        private static final int MAX_CREATURES = 100;
         private boolean paused = false;
         private boolean running = true;
 
@@ -56,15 +66,19 @@ public final class GameLoop {
         /**
          * Finishes current cycle and then pauses.
          */
-        synchronized void pause() {
+        private synchronized void pause() {
             paused = true;
         }
 
         /**
          * Resumes where it last left off.
          */
-        synchronized void resume() {
+        private synchronized void resume() {
             paused = false;
+        }
+
+        public boolean isPaused() {
+            return paused;
         }
 
         @Override
@@ -79,6 +93,7 @@ public final class GameLoop {
                         Log.e(TAG, "Pausing of game loop has been interrupted.", e);
                     }
                 }
+                long startTime = System.currentTimeMillis();
 
                 if (Store.INSTANCE.creatureCount() < MAX_CREATURES) {
                     //Add a new creature at a random location
@@ -89,7 +104,36 @@ public final class GameLoop {
                 Store.INSTANCE.post(new MoveAll());
 
                 callback.render(Store.INSTANCE);
+
+                //Calculate frame time
+                long frameTime = System.currentTimeMillis() - startTime;
+                if (frameTime > 0) {
+                    Log.i(TAG, "FPS: " + Math.round(1000 / frameTime));
+                }
             }
+        }
+    }
+
+    /**
+     * Eventbus method.
+     *
+     * @param action action that occurred.
+     */
+    @Subscribe(threadMode = ThreadMode.MAIN)
+    public void onAction(GameActions action) {
+        switch (action) {
+            case TOGGLE_PAUSE_RESUME:
+                if (loop.isPaused()) {
+                    loop.resume();
+                    EventBus.INSTANCE.post(new UiAction(loop.callback.getString(R.string.action_resumed), UiActions.SHOW_MESSAGE));
+                    EventBus.INSTANCE.post(new UiAction(String.valueOf(R.drawable.ic_pause), UiActions.CHANGE_FAB_ICON));
+                } else {
+                    loop.pause();
+                    EventBus.INSTANCE.post(new UiAction(loop.callback.getString(R.string.action_paused), UiActions.SHOW_MESSAGE));
+                    EventBus.INSTANCE.post(new UiAction(String.valueOf(R.drawable.ic_play), UiActions.CHANGE_FAB_ICON));
+                }
+            default:
+                break;
         }
     }
 }

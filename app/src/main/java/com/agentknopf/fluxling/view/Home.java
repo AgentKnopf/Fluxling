@@ -1,6 +1,12 @@
 package com.agentknopf.fluxling.view;
 
+import com.agentknopf.fluxling.actions.EventBus;
+import com.agentknopf.fluxling.actions.GameActions;
+import com.agentknopf.fluxling.actions.UiAction;
 import com.fluxling.agentknopf.fluxling.R;
+
+import org.greenrobot.eventbus.Subscribe;
+import org.greenrobot.eventbus.ThreadMode;
 
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
@@ -24,11 +30,11 @@ public class Home extends AppCompatActivity implements NavigationView.OnNavigati
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
-        FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
+        FloatingActionButton fab = getFab();
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG).setAction("Action", null).show();
+                EventBus.INSTANCE.post(GameActions.TOGGLE_PAUSE_RESUME);
             }
         });
 
@@ -39,6 +45,18 @@ public class Home extends AppCompatActivity implements NavigationView.OnNavigati
 
         NavigationView navigationView = (NavigationView) findViewById(R.id.nav_view);
         navigationView.setNavigationItemSelectedListener(this);
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        EventBus.INSTANCE.register(this);
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        EventBus.INSTANCE.unRegister(this);
     }
 
     @Override
@@ -96,5 +114,21 @@ public class Home extends AppCompatActivity implements NavigationView.OnNavigati
         DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
         drawer.closeDrawer(GravityCompat.START);
         return true;
+    }
+
+    @Subscribe(threadMode = ThreadMode.MAIN)
+    public void onUiAction(UiAction action) {
+        switch (action.getAction()) {
+            case SHOW_MESSAGE:
+                Snackbar.make(getFab(), action.getValue(), Snackbar.LENGTH_LONG).show();
+                break;
+            case CHANGE_FAB_ICON:
+                getFab().setImageDrawable(getDrawable(Integer.valueOf(action.getValue())));
+                break;
+        }
+    }
+
+    public FloatingActionButton getFab() {
+        return (FloatingActionButton) findViewById(R.id.fab);
     }
 }
